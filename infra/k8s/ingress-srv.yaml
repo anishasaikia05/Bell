@@ -1,0 +1,52 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-service
+  annotations: # help ingress-controller understand we want to feed it some routing rules
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/use-regex: 'true' # Indicates that paths specified below will have regular expressions
+spec:
+  # Rules will contain all different routing rules that we want to apply to teach the Ingress controller how to take incoming traffic and route
+  # them up toward different parts.
+  rules:
+    - host: bell.com # pretend domain name that can be connected only from our local machine
+      http:
+        paths:
+          - path: /api/users/?(.*)
+            pathType: Prefix
+            backend: # send request (path) to the specified backend
+              service:
+                name: auth-srv
+                port:
+                  number: 3000
+          - path: /api/products/?(.*)
+            pathType: Prefix
+            backend: # send request (path) to the specified backend
+              service:
+                name: products-srv
+                port:
+                  number: 3000
+          - path: /api/orders/?(.*)
+            pathType: Prefix
+            backend: # send request (path) to the specified backend
+              service:
+                name: products-srv
+                port:
+                  number: 3000
+          - path: /api/payments/?(.*)
+            pathType: Prefix
+            backend: # send request (path) to the specified backend
+              service:
+                name: payments-srv
+                port:
+                  number: 3000
+          - path: /?(.*)
+            pathType: Prefix
+            backend: # send request (path) to the specified backend
+              service:
+                name: client-srv
+                port:
+                  number: 3000
+# We will make sure that if any request is coming into our application with the specified path, we'll send it to the corresponding microservice.
+# We'll not send it directly to the microservice, rather to its Cluster IP service as it is through those that we communicate between different things
+# inside of our cluster.

@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: products-depl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: products
+  template:
+    metadata:
+      labels:
+        app: products
+    spec:
+      containers:
+        - name: products
+          image: anee005/products
+          env:
+            - name: JWT_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: jwt-secret
+                  key: JWT_KEY
+            - name: MONGO_URI_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: mongo-secret
+                  key: username
+            - name: MONGO_URI_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mongo-secret
+                  key: password
+            - name: MONGO_URI
+              value: 'mongodb+srv://$(MONGO_URI_USERNAME):$(MONGO_URI_PASSWORD)@cluster0.nkq71.mongodb.net/product?retryWrites=true&w=majority'
+            - name: CLOUDINARY_CLOUD_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: cloudinary-secret
+                  key: CLOUDINARY_CLOUD_NAME
+            - name: CLOUDINARY_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: cloudinary-secret
+                  key: CLOUDINARY_API_KEY
+            - name: CLOUDINARY_API_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: cloudinary-secret
+                  key: CLOUDINARY_API_SECRET
+
+# Products service will try to handle authentication by itself. It will decide whether or not a request includes a valid JSON Web token.
+# And we can only validate a token if we have the original key that we create the token with. So our ticket service definitely needs the JSON Web tokens key.
+
+# 1. mongodb://products-mongo-srv:27017/products
+# Hardcoding a connection URL inside of a deployment file. This URI is only accessible if someone is inside of our cluster.
+# As long as we are just connecting to some plain URL without any security around it, and as long
+# as we also have a separate mongodb deployment file that very plainly spells out exactly how to connect to this thing, it's not a problem
+
+# 2. 'mongodb+srv://anee005:asdf1234@cluster0.nkq71.mongodb.net/product?retryWrites=true&w=majority'
+# But if there is a username and password associated or required to log in or connect to this Mongo DB instance writing it in plain text is definitely not the way.
+# Define this environment variable inside of a secret, just as we did with the JSON Web tokens key.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: products-srv
+spec:
+  selector:
+    app: products
+  ports:
+    - name: products
+      protocol: TCP
+      port: 3000
+      targetPort: 3000

@@ -1,0 +1,50 @@
+# Skaffold config file watches our infra directory for any change to a config file and automatically apply it to our cluster.
+# Also any time we change any code inside of our auth directory, it will sync all the files inside there with the appropriate running container inside of our cluster.
+
+apiVersion: skaffold/v2alpha3 # version of the configuration
+kind: Config
+deploy: # deploy lists out all the different config files we want to load in our cluster and describes how images are deployed.
+  kubectl:
+    manifests: # list out all files/directories we want to sync or make use of
+      - ./infra/k8s/* # include all files in k8s
+      # - ./infra/k8s/auth-depl.yaml
+      # - ./infra/k8s/products-depl.yaml
+      # - ./infra/k8s/ingress-srv.yaml
+      # - ./infra/k8s/rabbitmq-depl.yaml
+build: # describes how images are built.
+  local:
+    push: false # this indicates whenever image is built do not push it to dockerhub which is the default behaviour
+  artifacts: # list images to be built
+    - image: anee005/auth
+      context: auth # folder which contains our image
+      docker:
+        dockerfile: Dockerfile
+      sync:
+        manual: # manual sync rules indicating the source and destination.
+          - src: 'src/**/*.ts' # src impllies set of files that scaffold need to watch
+            dest: . # destination path in the container where the files should be synced to.
+            # '.' means basically just take wherever the file was found from and throw it to the corresponding path inside the container.
+    - image: anee005/client
+      context: client # folder which contains our image
+      docker:
+        dockerfile: Dockerfile
+      sync:
+        manual:
+          - src: '**/*.js'
+            dest: .
+    - image: anee005/products
+      context: products # folder which contains our image
+      docker:
+        dockerfile: Dockerfile
+      sync:
+        manual:
+          - src: 'src/**/*.ts'
+            dest: .
+    - image: anee005/payments
+      context: payments # folder which contains our image
+      docker:
+        dockerfile: Dockerfile
+      sync:
+        manual:
+          - src: 'src/**/*.ts'
+            dest: .
